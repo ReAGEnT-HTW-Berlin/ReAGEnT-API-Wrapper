@@ -8,12 +8,12 @@ import scala.io.BufferedSource
 
 object ReAGEnT_API_Wrapper {
   private val SOURCE_PROVIDER_CLASS = TwitterStreamingSource.getClass.getCanonicalName
-  var dbName: String = "examples"
-  var user: String = "seija"
-  var pwd: String = "RhoMTXB2"
+  var dbName: String = _
+  var user: String = _
+  var pwd: String = _
 
   def main(args: Array[String]): Unit = {
-//    setConfig()
+    setConfig()
 
     println("ReAGEnt_API_Wrapper")
 
