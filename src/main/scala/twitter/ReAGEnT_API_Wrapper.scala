@@ -8,11 +8,13 @@ import scala.io.BufferedSource
 
 object ReAGEnT_API_Wrapper {
   private val SOURCE_PROVIDER_CLASS = TwitterStreamingSource.getClass.getCanonicalName
+  private var running: Boolean = _
   var dbName: String = _
   var user: String = _
   var pwd: String = _
 
   def main(args: Array[String]): Unit = {
+    running = true
     setConfig()
 
     println("ReAGEnt_API_Wrapper")
@@ -42,13 +44,15 @@ object ReAGEnT_API_Wrapper {
 
     import spark.implicits._
 
-    // get all tweets and write them to mongoDB
+    // WORKER THREAD 1
+    //   get all tweets from DataFrame and write them to mongoDB
     val tweets: StreamingQuery = tweetDF
       .writeStream
       .foreach(new MongoForEachWriter(dbName, user, pwd))
       .outputMode("append")
       .start()
 
+    // WORKER THREAD 2
     //    get last tweet, sorted by party in parser
     val lastTweets: StreamingQuery = tweetDF.select("party", "id")
       .writeStream
@@ -56,42 +60,45 @@ object ReAGEnT_API_Wrapper {
       .outputMode("append")
       .start()
 
+    // WORKER THREAD 3
     //    get hashtags per hour in sink
     val hashtags = tweetDF.select("hashtags")
       .withColumn("timestamp", current_timestamp())
       .withColumn("hashtag", explode($"hashtags"))
       .groupBy(window($"timestamp", "1 hour"), $"hashtag").count()
-    //    update them into mongodb every minute
+    //    update into mongodb every minute
     val x: StreamingQuery = hashtags.writeStream
       .trigger(Trigger.ProcessingTime("1 minute"))
       .outputMode("complete")
       .foreach(new MongoUpsertWriter(TweetHashtagParser(), dbName, "hashtagsByHour", user, pwd))
       .start()
 
+    // WORKER THREAD 4
     //    get hashtags per hour and party in sink
     val hashtags_party = tweetDF.select("hashtags", "party").
       withColumn("timestamp", current_timestamp()).
       withColumn("hashtag", explode($"hashtags")).
       groupBy(window($"timestamp", "1 hour"), $"hashtag", $"party").count()
-    //    update them into mongodb every minute
+    //    update into mongodb every minute
     val y: StreamingQuery = hashtags_party.writeStream
       .trigger(Trigger.ProcessingTime("1 minute"))
       .outputMode("complete")
       .foreach(new MongoUpsertWriter(TweetHashtagPartyParser(), dbName, "hashtagsByHourAndParty", user, pwd))
       .start()
 
-    //    get tweets per hour and party in sink
+    // WORKER THREAD 5
+    //    get tweet count per hour and party in sink
     val windowedCounts_1h = tweetDF.select("party").
       withColumn("timestamp", current_timestamp()).
       groupBy(window($"timestamp", "1 hour"), $"party").count()
-    //    update them into mongodb every minute
+    //    update into mongodb every minute
     val z: StreamingQuery = windowedCounts_1h.writeStream
       .trigger(Trigger.ProcessingTime("1 minute"))
       .outputMode("complete")
       .foreach(new MongoUpsertWriter(TweetCountParser(), dbName, "metricsByHourAndParty", user, pwd))
       .start()
 
-    while (true) {}
+    while (running) {}
 
     println("*******************************************************************************************")
     println("Spark Thread stopped")
@@ -101,14 +108,30 @@ object ReAGEnT_API_Wrapper {
     x.stop
     y.stop
     z.stop
+
     TwitterConnectionImpl.stop
+
+    spark.sparkContext.cancelAllJobs()
+    spark.sparkContext.stop()
+
+    spark.close()
     spark.stop
 
+    tweetDF.sparkSession.close()
+    tweetDF.sparkSession.stop()
+
+    tweetDF.sparkSession.streams.awaitAnyTermination()
+
+    spark.streams.awaitAnyTermination()
+
+    // restart after server disconnect
+    Thread.sleep(2000)
+    main(null)
   }
 
   /*
-    read in database name user and password
- */
+      read in database name user and password
+   */
   def setConfig(): Unit = {
     val bufSource: BufferedSource = scala.io.Source.fromFile("config.txt")
     val bufReader = bufSource.bufferedReader
@@ -119,5 +142,9 @@ object ReAGEnT_API_Wrapper {
     } catch {
       case e: Exception => println("wrong config.txt - write dbName, user, password line after line")
     }
+  }
+
+  def stop(): Unit = {
+    running = false
   }
 }

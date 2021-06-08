@@ -107,8 +107,25 @@ case object MyTweet {
 
     }
     catch {
-      case e: Exception => None //println("****waiting****" + json + "***"); None
+      case e: Exception => handleErrors(json);None //println("****waiting****" + json + "***"); None
     }
+  }
+
+
+  def handleErrors(json: String): Unit = {
+    try {
+      val t: Option[Any] = JSONUtils.parseJson(json)
+      val jsonMap = t.get.asInstanceOf[Map[String, Any]]
+      val errors: Option[Any] = jsonMap.get("errors")
+
+      println("restarting . . .")
+      TwitterConnectionImpl.stop
+      ReAGEnT_API_Wrapper.stop()
+    }
+    catch {
+      case e: Exception => None
+    }
+    None
   }
 
   def extractUsers(author_id: String, userList: List[Map[String, Any]]): (String, String, List[User]) = {

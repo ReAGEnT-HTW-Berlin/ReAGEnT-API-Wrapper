@@ -13,7 +13,6 @@ import scala.collection.mutable
 class MongoUpsertWriter(converter: Converter, dbName:String, collection: String, user:String, pwd: String) extends ForeachWriter[Row] {
 
   val writeConfig: WriteConfig = WriteConfig(Map("uri" -> s"mongodb://$user:$pwd@141.45.146.253:27017/$dbName.$collection?authSource=$dbName"))
-//  val writeConfig: WriteConfig = WriteConfig(Map("uri" -> s"mongodb://seija:RhoMTXB2@reagent1.f4.htw-berlin.de:27017/examples.${collection}?authSource=examples"))
   var mongoConnector: MongoConnector = _
   var tweetList: mutable.ArrayBuffer[Row] = _
   //val schema= ScalaReflection.schemaFor[MyTweet].dataType.asInstanceOf[StructType]
