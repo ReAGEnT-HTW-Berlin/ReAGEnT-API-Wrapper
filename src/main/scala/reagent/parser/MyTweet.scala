@@ -1,10 +1,11 @@
-package twitter
+package reagent.parser
 
 import java.util
 
 import org.apache.spark.sql.Row
 import org.bson.Document
-import utils.TweetWriteMongoConnection
+import reagent.ReAGEnT_API_Wrapper
+import reagent.utils.{JSONUtils, TweetWriteMongoConnection}
 
 case class MyTweet(
                     id: String,
@@ -107,7 +108,7 @@ case object MyTweet {
 
     }
     catch {
-      case e: Exception => handleErrors(json);None //println("****waiting****" + json + "***"); None
+      case e: Exception => handleErrors(json); None //println("****waiting****" + json + "***"); None
     }
   }
 
@@ -118,9 +119,15 @@ case object MyTweet {
       val jsonMap = t.get.asInstanceOf[Map[String, Any]]
       val errors: Option[Any] = jsonMap.get("errors")
 
-      println("restarting . . .")
-      TwitterConnectionImpl.stop
-      ReAGEnT_API_Wrapper.stop()
+      if (errors.get.asInstanceOf[List[Map[String, Any]]].flatten.toMap.getOrElse("title", "").equals("operational-disconnect")) {
+        println("exiting application because of operational disconnect")
+        ReAGEnT_API_Wrapper.stop()
+      }
+      else {
+        println("reconnecting in 120 Seconds . . .")
+        Thread.sleep(120000)
+        ReAGEnT_API_Wrapper.stop()
+      }
     }
     catch {
       case e: Exception => None

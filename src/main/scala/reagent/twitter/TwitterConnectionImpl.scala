@@ -1,4 +1,4 @@
-package twitter
+package reagent.twitter
 
 import scalaj.http._
 
@@ -16,7 +16,6 @@ class TwitterConnectionImpl extends TwitterConnection{
     override def run() {
 
       val TWITTER_FILTERED_STREAM_ENDPOINT = "https://api.twitter.com/2/tweets/search/stream?tweet.fields=created_at,entities,public_metrics,context_annotations,geo,referenced_tweets,reply_settings,source,withheld,attachments,possibly_sensitive&expansions=author_id,in_reply_to_user_id&user.fields=description&media.fields=media_key,type,duration_ms,public_metrics"
-//      val TWITTER_FILTERED_STREAM_ENDPOINT = "https://api.twitter.com/2/tweets/search/stream?tweet.fields=created_at,entities&expansions=author_id,in_reply_to_user_id"
       val bearerToken= sys.env.getOrElse("TWITTER_BEARER","")
       while (running.get) {
         println("receiving tweets...")
@@ -36,13 +35,6 @@ class TwitterConnectionImpl extends TwitterConnection{
 
               println(line)
               sendTweetToListeningClasses(line)
-              /*
-              val tweetOpt = MyTweet.createTweet(line)
-              tweetOpt match {
-                case Some(tweet) => sendTweetToListeningClasses(tweet)
-                case None => println("--No tweet created--")
-              }
-               */
             }
           }
           else {

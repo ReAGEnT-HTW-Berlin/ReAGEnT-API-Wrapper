@@ -12,10 +12,10 @@ libraryDependencies ++=Seq(
 	"org.apache.spark" %% "spark-catalyst" % SparkVersion,
 	// MongoDB-Spark-Connector
 	"org.mongodb.spark" %% "mongo-spark-connector" % "2.4.3",
-//	"org.reactivemongo" %% "reactivemongo" % "1.0.3",
+	//	"org.reactivemongo" %% "reactivemongo" % "1.0.3",
 	"org.mongodb.scala" %% "mongo-scala-driver" % "2.9.0",
 	// JSON
-//	"io.spray" %%  "spray-json" % "1.3.6",
+	//	"io.spray" %%  "spray-json" % "1.3.6",
 	// Configuration
 	"com.typesafe" % "config" % "1.4.1",
 	// Http Library
@@ -23,5 +23,4 @@ libraryDependencies ++=Seq(
 	// Tests
 	"org.scalactic" %% "scalactic" % "3.2.5",
 	"org.scalatest" %% "scalatest" % "3.2.5" % "test",
-
 )

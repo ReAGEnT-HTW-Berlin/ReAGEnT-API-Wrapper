@@ -1,4 +1,4 @@
-package twitter
+package reagent.twitter
 
 import scala.collection.mutable.ArrayBuffer
 import java.util.concurrent.atomic.AtomicBoolean

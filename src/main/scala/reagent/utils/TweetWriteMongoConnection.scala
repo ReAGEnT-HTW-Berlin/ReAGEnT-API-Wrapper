@@ -1,4 +1,4 @@
-package utils
+package reagent.utils
 
 import org.mongodb.scala._
 

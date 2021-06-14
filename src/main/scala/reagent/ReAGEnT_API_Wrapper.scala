@@ -1,8 +1,11 @@
-package twitter
+package reagent
 
+import org.apache.spark.sql.functions.{current_timestamp, explode, window}
 import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions._
+import reagent.mongo.{MongoForEachWriter, MongoUpsertWriter}
+import reagent.parser.{TweetCountParser, TweetHashtagParser, TweetHashtagPartyParser, TweetLastParser}
+import reagent.twitter.{TwitterConnectionImpl, TwitterStreamingSource}
 
 import scala.io.BufferedSource
 
@@ -37,7 +40,6 @@ object ReAGEnT_API_Wrapper {
     val tweetDF: DataFrame = spark.readStream.
       format(providerClassName).
       option(TwitterStreamingSource.QUEUE_SIZE, 10000).
-
       load
 
     tweetDF.printSchema
@@ -100,9 +102,9 @@ object ReAGEnT_API_Wrapper {
 
     while (running) {}
 
-    println("*******************************************************************************************")
-    println("Spark Thread stopped")
-    println("*******************************************************************************************")
+    println("**********************")
+    println(" Spark Thread stopped ")
+    println("**********************")
     tweets.stop
     lastTweets.stop
     x.stop
@@ -120,20 +122,19 @@ object ReAGEnT_API_Wrapper {
     tweetDF.sparkSession.close()
     tweetDF.sparkSession.stop()
 
+    // wait for spark to close all streams, so the workers can save their data
     tweetDF.sparkSession.streams.awaitAnyTermination()
-
     spark.streams.awaitAnyTermination()
 
-    // restart after server disconnect
-    Thread.sleep(2000)
-    main(null)
+    // exit the application so systemd restarts it
+    System.exit(121)
   }
 
   /*
       read in database name user and password
    */
   def setConfig(): Unit = {
-    val bufSource: BufferedSource = scala.io.Source.fromFile("config.txt")
+    val bufSource: BufferedSource = scala.io.Source.fromFile("/usr/share/reagent-api-wrapper/config.txt")
     val bufReader = bufSource.bufferedReader
     try {
       dbName = bufReader.readLine

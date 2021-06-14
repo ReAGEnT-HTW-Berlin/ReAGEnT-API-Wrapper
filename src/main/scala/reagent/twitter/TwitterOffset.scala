@@ -1,4 +1,4 @@
-package twitter
+package reagent.twitter
 
 import org.apache.spark.sql.execution.streaming.{Offset, SerializedOffset}
 import org.apache.spark.sql.sources.v2

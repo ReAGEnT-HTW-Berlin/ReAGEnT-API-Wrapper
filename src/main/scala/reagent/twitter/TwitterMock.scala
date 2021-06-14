@@ -1,8 +1,7 @@
-package twitter
+package reagent.twitter
 
-import java.util.concurrent.atomic.AtomicBoolean
-import scala.collection.mutable.ArrayBuffer
-import java.io.{BufferedReader,InputStream}
+import reagent.utils.JSONUtils
+
 import scala.io.BufferedSource
 
 class TwitterConnectionMock extends TwitterConnection{
@@ -43,7 +42,7 @@ class TwitterConnectionMock extends TwitterConnection{
 
   override def initialize:Unit={
 
-    bufSource= scala.io.Source.fromFile("jcoll2.txt")
+    bufSource= scala.io.Source.fromFile("testData.txt")
     tt= new twitterThread
     tt.start
   }

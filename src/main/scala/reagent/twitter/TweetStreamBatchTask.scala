@@ -1,7 +1,8 @@
-package twitter
+package reagent.twitter
 
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.reader.{InputPartition, InputPartitionReader}
+import reagent.parser.MyTweet
 
 import scala.collection.mutable.ListBuffer
 class TweetStreamBatchTask(tweetList:ListBuffer[MyTweet]) extends InputPartition[InternalRow] {

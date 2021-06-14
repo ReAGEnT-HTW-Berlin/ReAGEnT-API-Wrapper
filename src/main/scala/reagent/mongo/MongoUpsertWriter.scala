@@ -1,4 +1,4 @@
-package twitter
+package reagent.mongo
 
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.ReplaceOptions
@@ -7,34 +7,25 @@ import com.mongodb.spark.config.WriteConfig
 import org.apache.spark.sql.{ForeachWriter, _}
 import org.bson.Document
 import org.mongodb.scala.model.Filters._
+import reagent.parser.Converter
 
 import scala.collection.mutable
 
-class MongoUpsertWriter(converter: Converter, dbName:String, collection: String, user:String, pwd: String) extends ForeachWriter[Row] {
+class MongoUpsertWriter(converter: Converter, dbName: String, collection: String, user: String, pwd: String) extends ForeachWriter[Row] {
 
-  val writeConfig: WriteConfig = WriteConfig(Map("uri" -> s"mongodb://$user:$pwd@141.45.146.253:27017/$dbName.$collection?authSource=$dbName"))
+  val writeConfig: WriteConfig = WriteConfig(Map("uri" -> s"mongodb://$user:$pwd@localhost:27017/$dbName.$collection?authSource=$dbName"))
   var mongoConnector: MongoConnector = _
   var tweetList: mutable.ArrayBuffer[Row] = _
-  //val schema= ScalaReflection.schemaFor[MyTweet].dataType.asInstanceOf[StructType]
-  //val encoder = RowEncoder(schema)
 
   override def process(value: Row): Unit = {
-//    tweetList.append(value)
     try {
       if (value != null) {
         val options = new ReplaceOptions().upsert(true)
-
+        // update entries in reagent.mongo
         mongoConnector.withCollectionDo(writeConfig, { collection: MongoCollection[Document] =>
           collection.replaceOne(
             equal("_id", converter.rowToParser(value).toDocument.get("_id")),
-//            tweetList.map(row => {
-              converter.rowToParser(value).toDocument,
-              //  println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-//                println(tweet)
-              //  println("QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ")
-
-//            })
-//              .asJava,
+            converter.rowToParser(value).toDocument,
             options
           )
         })

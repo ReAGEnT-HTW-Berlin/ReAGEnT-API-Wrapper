@@ -1,8 +1,9 @@
-package twitter
+package reagent.parser
 
 import org.apache.spark.sql.Row
 import org.bson.Document
 
+// saves the values to a document, which gets saved in mongoDB later
 case class TweetLast (
                         _id: String,
                         tweetId: String
@@ -16,6 +17,7 @@ case class TweetLast (
   }
 }
 
+// parses the metrics from dataFrame to values
 case class TweetLastParser() extends Converter {
 
   def rowToParser(row: Row): TweetLast = {

@@ -1,4 +1,4 @@
-package twitter
+package reagent.twitter
 
 import scala.collection.JavaConverters._
 import org.apache.spark.internal.Logging
@@ -10,6 +10,8 @@ import org.apache.spark.sql.sources.v2.{DataSourceOptions, DataSourceV2, MicroBa
 import org.apache.spark.sql.types._
 import java.util.Optional
 
+import reagent.parser.MyTweet
+
 class TwitterStreamingSource extends DataSourceV2 with MicroBatchReadSupport with DataSourceRegister with Logging {
 
   override def createMicroBatchReader(
@@ -19,7 +21,7 @@ class TwitterStreamingSource extends DataSourceV2 with MicroBatchReadSupport wit
     new TwitterStreamMicroBatchReader(options)
   }
 
-  override def shortName(): String = "twitter"
+  override def shortName(): String = "reagent/twitter"
 }
 
 
