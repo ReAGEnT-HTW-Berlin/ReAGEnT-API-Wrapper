@@ -1,14 +1,21 @@
-name := "ReAGEnt_API_Wrapper"
+name := "ReAGEnT-API-Wrapper"
 
 version := "0.1"
 
+//hadoop
+//lazy val HADOOP_VERSION = "3.3.0"
+//lazy val dependenceList = Seq(
+//	"org.apache.hadoop" % "hadoop-hdfs" % HADOOP_VERSION
+//	,"org.apache.hadoop" % "hadoop-common" % HADOOP_VERSION
+//)
+
 scalaVersion := "2.12.13"
 val SparkVersion = "2.4.7"
-libraryDependencies ++=Seq(
+libraryDependencies ++= Seq(
 	// Spark Dependencies
 	"org.apache.spark" %% "spark-core" % SparkVersion,
 	"org.apache.spark" %% "spark-streaming" % SparkVersion,
-	"org.apache.spark" %% "spark-sql" % SparkVersion ,
+	"org.apache.spark" %% "spark-sql" % SparkVersion,
 	"org.apache.spark" %% "spark-catalyst" % SparkVersion,
 	// MongoDB-Spark-Connector
 	"org.mongodb.spark" %% "mongo-spark-connector" % "2.4.3",
@@ -23,4 +30,7 @@ libraryDependencies ++=Seq(
 	// Tests
 	"org.scalactic" %% "scalactic" % "3.2.5",
 	"org.scalatest" %% "scalatest" % "3.2.5" % "test",
+	// Sentiment Analysis
+	"edu.stanford.nlp" % "stanford-corenlp" % "4.2.2"
 )
+libraryDependencies += "edu.stanford.nlp" % "stanford-corenlp" % "4.2.2" classifier "models"

@@ -1,7 +1,7 @@
 package test
 
 import org.scalatest.funsuite.AnyFunSuite
-import reagent.utils.Utils
+import utils.Utils
 class UtilsTest extends AnyFunSuite{
 
   test("MdB getTest"){
