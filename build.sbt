@@ -2,15 +2,9 @@ name := "ReAGEnT-API-Wrapper"
 
 version := "0.1"
 
-//hadoop
-//lazy val HADOOP_VERSION = "3.3.0"
-//lazy val dependenceList = Seq(
-//	"org.apache.hadoop" % "hadoop-hdfs" % HADOOP_VERSION
-//	,"org.apache.hadoop" % "hadoop-common" % HADOOP_VERSION
-//)
-
-scalaVersion := "2.12.13"
-val SparkVersion = "2.4.7"
+scalaVersion := "2.12.14"
+//val SparkVersion = "2.4.7"
+val SparkVersion = "2.4.8"
 libraryDependencies ++= Seq(
 	// Spark Dependencies
 	"org.apache.spark" %% "spark-core" % SparkVersion,
@@ -34,3 +28,6 @@ libraryDependencies ++= Seq(
 	"edu.stanford.nlp" % "stanford-corenlp" % "4.2.2"
 )
 libraryDependencies += "edu.stanford.nlp" % "stanford-corenlp" % "4.2.2" classifier "models"
+
+fork in run := false
+trapExit := false
