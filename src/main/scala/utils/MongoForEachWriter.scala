@@ -15,8 +15,6 @@ class MongoForEachWriter(dbName: String, user: String, pwd: String) extends Fore
   val writeConfig: WriteConfig = WriteConfig(Map("uri" -> s"mongodb://$user:$pwd@141.45.146.253:27017/$dbName.tweets_live?authSource=$dbName"))
   var mongoConnector: MongoConnector = _
   var tweetList: mutable.ArrayBuffer[Row] = _
-  //val schema= ScalaReflection.schemaFor[MyTweet].dataType.asInstanceOf[StructType]
-  //val encoder = RowEncoder(schema)
 
   override def process(value: Row): Unit = {
     new TweetWriteMongoConnection(dbName, user, pwd, "bson", "json").writeTweetToMongoDB(value.getString(0), value.getString(13))

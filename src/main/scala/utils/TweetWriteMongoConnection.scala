@@ -5,10 +5,10 @@ import org.mongodb.scala._
 class TweetWriteMongoConnection(dbName:String, user:String, pwd:String, collBSON: String, collJSON: String) {
 
   val connectionString: String = s"mongodb://${user}:${pwd}@141.45.146.253:27017/?authSource=${dbName}"
-  val mongoClient = MongoClient(connectionString)
+  val mongoClient: MongoClient = MongoClient(connectionString)
   val database: MongoDatabase = mongoClient.getDatabase(dbName)
-  val cBSON: MongoCollection[Document] = database.getCollection(collBSON);
-  val cJSON: MongoCollection[Document] = database.getCollection(collJSON);
+  val cBSON: MongoCollection[Document] = database.getCollection(collBSON)
+  val cJSON: MongoCollection[Document] = database.getCollection(collJSON)
 
   def writeTweetToMongoDB(tweetID: String, tweetJSON: String) = {
 

@@ -2,9 +2,9 @@ package twitter
 
 import java.util
 
-import utils.{JSONUtils, SentimentAnalysisUtils, TweetWriteMongoConnection}
 import org.apache.spark.sql.Row
 import org.bson.Document
+import utils.{JSONUtils, SentimentAnalysisUtils}
 
 case class MyTweet(
                     id: String,
@@ -21,7 +21,6 @@ case class MyTweet(
                     sentiment: Double,
                     attachments: Int,
                     json: String
-                    //                    processingTime: TimeStamp
                   ) {
 
   def toDocument: Document = {
@@ -59,9 +58,6 @@ case class User(user_id: String, username: String, name: String)
 
 case object MyTweet {
 
-  val mongoCon = new TweetWriteMongoConnection("examples", "seija", "RhoMTXB2", "bson", "json")
-  //  final val mdbs: Map[String, MdB] = Utils.getMdBs("BundestagTwitterAccounts.csv")
-
   def createTweet(json: String): Option[MyTweet] = {
 
     try {
@@ -85,7 +81,7 @@ case object MyTweet {
             d.get("created_at"),
             d.get("author_id": String),
             d.get("source": String),
-            d.getOrElse("attachments", Map()).asInstanceOf[Map[String, Any]].size, //d.getOrElse("attachments", 0),
+            d.getOrElse("attachments", Map()).asInstanceOf[Map[String, Any]].size,
             f,
             extractUsers(d.getOrElse("author_id", "").asInstanceOf[String], u.asInstanceOf[List[Map[String, Any]]]),
             extractHashtags(e.getOrElse("hashtags", List()).asInstanceOf[List[Map[String, Any]]])) match {
@@ -118,28 +114,27 @@ case object MyTweet {
   }
 
 
-  def handleErrors(json: String): Unit = {
+  def handleErrors(json: String) = {
     try {
       val t: Option[Any] = JSONUtils.parseJson(json)
       val jsonMap = t.get.asInstanceOf[Map[String, Any]]
       val errors: Option[Any] = jsonMap.get("errors")
 
       if (errors.get.asInstanceOf[List[Map[String, Any]]].flatten.toMap.getOrElse("title", "").equals("operational-disconnect")) {
-        println("exiting application because of operational disconnect")
         TwitterConnectionImpl.stop
-        ReAGEnT_API_Wrapper.stop()
+        println("exiting application because of operational disconnect")
+        ReAGEnT_API_Wrapper.stop
       }
       else {
         println("reconnecting in 60 Seconds . . .")
         TwitterConnectionImpl.stop
         Thread.sleep(60000)
-        ReAGEnT_API_Wrapper.stop()
+        ReAGEnT_API_Wrapper.stop
       }
     }
     catch {
       case e: Exception => None
     }
-    None
   }
 
   def extractUsers(author_id: String, userList: List[Map[String, Any]]): (String, String, List[User]) = {
@@ -147,7 +142,7 @@ case object MyTweet {
       User(u("id").asInstanceOf[String], u("username").asInstanceOf[String], u("name").asInstanceOf[String])
     }
     val user = users.filter(u => author_id.equals(u.user_id)).head
-    (user.username, user.name, users.toList)
+    (user.username, user.name, users)
   }
 
   def extractHashtags(tagList: List[Map[String, Any]]): List[String] = {
@@ -155,7 +150,7 @@ case object MyTweet {
     tagList.flatMap(el => {
       val t = el.getOrElse("tag", "");
       if (t == "") List() else List(t)
-    }).toList.asInstanceOf[List[String]]
+    }).asInstanceOf[List[String]]
   }
 
   def tweetToRow(myTweet: MyTweet): Row = {
@@ -175,8 +170,3 @@ case object MyTweet {
   }
 
 }
-
-/*
-{"data":{"author_id":"1238140547489030146","id":"1388441831680188419","text":"@BetzeSGT @db_qhd @ZDFheute Kann nicht and genau sagen. Es sind aber sich schon einige Kinder an Corona gestorben. In den Rohdaten des RKI mehr als in der Übersicht. Da angeblich nur mit und nicht an.\nKann man dann vergleichen, ob mit oder ohne Impfung schlimmer war. Wird ja sicher beides geben. 😔","entities":{"mentions":[{"start":0,"end":9,"username":"BetzeSGT"},{"start":10,"end":17,"username":"db_qhd"},{"start":18,"end":27,"username":"ZDFheute"}]},"created_at":"2021-05-01T10:35:03.000Z"},"includes":{"users":[{"id":"1238140547489030146","name":"MEISU🔴🔴🔴","username":"MEISU98037829"}]},"matching_rules":[{"id":1371608279269445632,"tag":"Covid-19 Keywords Deutsch"}]}
-
- */

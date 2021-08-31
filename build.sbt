@@ -3,8 +3,8 @@ name := "ReAGEnT-API-Wrapper"
 version := "0.1"
 
 scalaVersion := "2.12.14"
-//val SparkVersion = "2.4.7"
 val SparkVersion = "2.4.8"
+
 libraryDependencies ++= Seq(
 	// Spark Dependencies
 	"org.apache.spark" %% "spark-core" % SparkVersion,
@@ -15,8 +15,6 @@ libraryDependencies ++= Seq(
 	"org.mongodb.spark" %% "mongo-spark-connector" % "2.4.3",
 	//	"org.reactivemongo" %% "reactivemongo" % "1.0.3",
 	"org.mongodb.scala" %% "mongo-scala-driver" % "2.9.0",
-	// JSON
-	//	"io.spray" %%  "spray-json" % "1.3.6",
 	// Configuration
 	"com.typesafe" % "config" % "1.4.1",
 	// Http Library
@@ -27,7 +25,10 @@ libraryDependencies ++= Seq(
 	// Sentiment Analysis
 	"edu.stanford.nlp" % "stanford-corenlp" % "4.2.2"
 )
+
+// stanford nlp for sentiment analysis
 libraryDependencies += "edu.stanford.nlp" % "stanford-corenlp" % "4.2.2" classifier "models"
 
+// disable trapExit, so systemd restarts the service upon operational disconnect or connection loss
 fork in run := false
 trapExit := false

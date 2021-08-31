@@ -1,12 +1,13 @@
 package twitter
 
-import parser.{TweetCountParser, TweetHashtagParser, TweetHashtagPartyParser, TweetLastParser, TweetMediaCountParser, TweetSentimentParser, TweetSourceParser, TweetUserPartyCountParser}
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions._
+import parser._
 import utils.{MongoForEachWriter, MongoUpdateWriter, MongoUpsertWriter}
 
-import scala.io.BufferedSource
+import scala.collection.mutable.ArrayBuffer
+
 
 object ReAGEnT_API_Wrapper {
   private val SOURCE_PROVIDER_CLASS = TwitterStreamingSource.getClass.getCanonicalName
@@ -39,26 +40,29 @@ object ReAGEnT_API_Wrapper {
       format(providerClassName).
       option(TwitterStreamingSource.QUEUE_SIZE, 1000).
       load
-
     tweetDF.printSchema
 
     import spark.implicits._
+
+    var writers = new ArrayBuffer[StreamingQuery]()
 
     // WORKER THREAD 1
     //   get all tweets from DataFrame and write them to mongoDB
     val tweets: StreamingQuery = tweetDF
       .writeStream
-      .foreach(new MongoForEachWriter(dbName, user, pwd))
+      .foreach(new MongoForEachWriter(dbName, user, pwd)) // writes every tweet to mongodb
       .outputMode("append")
       .start()
+    writers += tweets
 
     // WORKER THREAD 2
     //    get last tweet, sorted by party in parser
     val lastTweets: StreamingQuery = tweetDF.select("party", "id")
       .writeStream
-      .foreach(new MongoUpdateWriter(TweetLastParser(), dbName, "lastTweets", user, pwd))
+      .foreach(new MongoUpdateWriter(TweetLastParser(), dbName, "lastTweets", user, pwd)) // updates the last 15 tweets as they come to mongodb
       .outputMode("append")
       .start()
+    writers += lastTweets
 
     // WORKER THREAD 3
     //    get hashtags per hour in sink
@@ -67,36 +71,39 @@ object ReAGEnT_API_Wrapper {
       .withColumn("hashtag", explode($"hashtags"))
       .groupBy(window($"timestamp", "1 hour"), $"hashtag").count()
     //    update into mongodb every minute
-    val x: StreamingQuery = hashtags.writeStream
+    val hashtagsWriter: StreamingQuery = hashtags.writeStream
       .trigger(Trigger.ProcessingTime("1 minute"))
       .outputMode("complete")
-      .foreach(new MongoUpsertWriter(TweetHashtagParser(), dbName, "hashtagsByHour", user, pwd))
+      .foreach(new MongoUpsertWriter(TweetHashtagParser(), dbName, "hashtagsByHour", user, pwd)) // upserts the current most used hashtags to mongodb
       .start()
+    writers += hashtagsWriter
 
     // WORKER THREAD 4
     //    get hashtags per hour and party in sink
-    val hashtags_party = tweetDF.select("hashtags", "party").
+    val hashtagsParty = tweetDF.select("hashtags", "party").
       withColumn("timestamp", current_timestamp()).
       withColumn("hashtag", explode($"hashtags")).
       groupBy(window($"timestamp", "1 hour"), $"hashtag", $"party").count()
     //    update into mongodb every minute
-    val y: StreamingQuery = hashtags_party.writeStream
+    val hashtagsPartyWriter: StreamingQuery = hashtagsParty.writeStream
       .trigger(Trigger.ProcessingTime("1 minute"))
       .outputMode("complete")
       .foreach(new MongoUpsertWriter(TweetHashtagPartyParser(), dbName, "hashtagsByHourAndParty", user, pwd))
       .start()
+    writers += hashtagsPartyWriter
 
     // WORKER THREAD 5
     //    get tweet count per hour and party in sink
-    val windowedCounts_1h = tweetDF.select("party").
+    val windowedCounts = tweetDF.select("party").
       withColumn("timestamp", current_timestamp()).
       groupBy(window($"timestamp", "1 hour"), $"party").count()
     //    update into mongodb every minute
-    val z: StreamingQuery = windowedCounts_1h.writeStream
+    val windowedCountsWriter: StreamingQuery = windowedCounts.writeStream
       .trigger(Trigger.ProcessingTime("1 minute"))
       .outputMode("complete")
       .foreach(new MongoUpsertWriter(TweetCountParser(), dbName, "metricsByHourAndParty", user, pwd))
       .start()
+    writers += windowedCountsWriter
 
     // WORKER THREAD 6
     //    get media usage count per hour and party in sink
@@ -109,6 +116,7 @@ object ReAGEnT_API_Wrapper {
       .outputMode("complete")
       .foreach(new MongoUpsertWriter(TweetMediaCountParser(), dbName, "mediaUsageRunningByHourAndParty", user, pwd))
       .start()
+    writers += mediaUsageWriter
 
     // WORKER THREAD 7
     //    get tweet count per user, hour and party in sink
@@ -121,6 +129,7 @@ object ReAGEnT_API_Wrapper {
       .outputMode("complete")
       .foreach(new MongoUpsertWriter(TweetUserPartyCountParser(), dbName, "mostActiveRunningByHourAndParty", user, pwd))
       .start()
+    writers += mostActiveWriter
 
     // WORKER THREAD 8
     //    get average tweet sentiment per hour and party in sink
@@ -133,6 +142,7 @@ object ReAGEnT_API_Wrapper {
       .outputMode("complete")
       .foreach(new MongoUpsertWriter(TweetSentimentParser(), dbName, "sentimentRunningByHourAndParty", user, pwd))
       .start()
+    writers += sentimentWriter
 
     // WORKER THREAD 9
     //   get source device usage per hour and party in sink
@@ -145,53 +155,32 @@ object ReAGEnT_API_Wrapper {
       .outputMode("complete")
       .foreach(new MongoUpsertWriter(TweetSourceParser(), dbName, "sourceRunningByHourAndParty", user, pwd))
       .start()
+    writers += sourceWriter
 
-    while (running) {}
+    while (running) {} // gets interrupted when error is parsed in MyTweet -> restarts application
 
-    println("**********************")
-    println(" Spark Thread stopped ")
-    println("**********************")
-    tweets.stop
-    lastTweets.stop
-    x.stop
-    y.stop
-    z.stop
-    mediaUsageWriter.stop
-    mostActiveWriter.stop
-    sentimentWriter.stop
-    sourceWriter.stop
+    // stop all writers
+    for (writer <- writers)
+      writer.stop
 
+    // stop connection to twitter (important because of connection limitations)
     TwitterConnectionImpl.stop
 
-    spark.sparkContext.cancelAllJobs()
-    spark.sparkContext.stop()
-
-    spark.close()
+    // shut down spark
+    spark.sparkContext.cancelAllJobs
+    spark.sparkContext.stop
+    spark.close
     spark.stop
+    tweetDF.sparkSession.close
+    tweetDF.sparkSession.stop
+    tweetDF.sparkSession.streams.awaitAnyTermination
+    spark.streams.awaitAnyTermination
 
-    tweetDF.sparkSession.close()
-    tweetDF.sparkSession.stop()
-
-    tweetDF.sparkSession.streams.awaitAnyTermination()
-    spark.streams.awaitAnyTermination()
+    println("(!) leaving API Wrapper . . .")
+    sys.exit(121) // signal systemd to restart the application
   }
 
-  /*
-      read in database name user and password
-   */
-  def setConfig(): Unit = {
-    val bufSource: BufferedSource = scala.io.Source.fromFile("/usr/share/reagent-api-wrapper/config.txt")
-    val bufReader = bufSource.bufferedReader
-    try {
-      dbName = bufReader.readLine
-      user = bufReader.readLine
-      pwd = bufReader.readLine
-    } catch {
-      case e: Exception => println("wrong config.txt - write dbName, user, password line after line")
-    }
-  }
-
-  def stop(): Unit = {
+  def stop = {
     running = false
   }
 }

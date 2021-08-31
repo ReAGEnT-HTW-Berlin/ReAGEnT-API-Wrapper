@@ -26,7 +26,6 @@ case class TweetSentimentParser() extends Converter {
   def rowToParser(row: Row): TweetSentiment = {
     val startTime = row.getValuesMap(Seq("window")).asInstanceOf[Map[String, Any]].values.toList.head.asInstanceOf[GenericRowWithSchema].getTimestamp(0).toLocalDateTime
     val party = row.getValuesMap(Seq("party")).asInstanceOf[Map[String, Any]].values.toList.head.asInstanceOf[String]
-//    val count = row.getValuesMap(Seq("count")).asInstanceOf[Map[String, Any]].values.toList.head.asInstanceOf[Long]
     val sentiment = Try(row.getValuesMap(Seq("avg(sentiment)")).asInstanceOf[Map[String, Any]].values.toList.head.toString.toDouble).getOrElse(-1d)
 
     val id: java.util.Map[String, Any] = new java.util.HashMap()

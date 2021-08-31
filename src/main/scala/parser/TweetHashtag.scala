@@ -4,6 +4,7 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.bson.Document
 
+// saves the values to a document, that gets saved in mongoDB later
 case class TweetHashtag (
                        _id: java.util.Map[String, Any],
                        count: Long
@@ -17,6 +18,7 @@ case class TweetHashtag (
   }
 }
 
+// parses the metrics from dataFrame to values
 case class TweetHashtagParser() extends Converter {
 
   def rowToParser(row: Row): TweetHashtag = {
